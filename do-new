@@ -1,0 +1,10 @@
+#!/bin/bash
+
+nohup sh <<EOF >/dev/null 2>&1 &
+  i3-msg -t subscribe -m '[ "window" ]' \
+  | jq --unbuffered 'if (.change == "new") then .container.id else empty end' \
+  | head -n 1 \
+  | xargs -I '@winid' -- sh -c "i3-msg \"[ con_id=@winid ] $@\""
+EOF
+disown
+

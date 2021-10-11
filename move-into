@@ -1,0 +1,37 @@
+#!/bin/bash
+
+DIRECTION=$1
+CON_ID=$(i3-msg -t get_tree | jq '.. | select(.type?) | select(.focused==true).id')
+SPLIT_DIR=""
+
+function split_none() {
+# This is broken on sway because move commands behave differently depending on sibling containers.  I believe it is reported as a bug somewhere.
+# Remove current split
+# Would be solved by "split none"
+# https://github.com/swaywm/sway/pull/4935
+read -r LAYOUT PAR_LEN < \
+  <(i3-msg -t get_tree \
+    | jq -r 'recurse(.nodes[];.nodes!=null)|select(.nodes[].focused)| "\(.layout) \(.nodes | length)"')
+
+[ $PAR_LEN -eq 1 ] &&\
+if [ $LAYOUT = "splith" ] || [ $LAYOUT = "tabbed" ]; then
+  i3-msg move up
+elif [ $LAYOUT = "splitv" ] || [ $LAYOUT = "stacked" ]; then
+  i3-msg move left
+fi
+}
+
+split_none
+
+i3-msg focus $DIRECTION
+
+read -r WIDTH HEIGHT < \
+  <(i3-msg -t get_tree \
+    | jq -r 'recurse(.nodes[]?)|select(.focused).rect| "\(.width) \(.height)"')
+if [ $WIDTH -ge $HEIGHT ]; then
+  SPLIT_DIR=h
+else
+  SPLIT_DIR=v
+fi
+
+i3-msg "split $SPLIT_DIR; [con_id=$CON_ID] focus; move $DIRECTION"
